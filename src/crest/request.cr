@@ -51,6 +51,9 @@ module Crest
     @method : String
     @url : String
     @tls : OpenSSL::SSL::Context::Client?
+    @connect_timeout : Int32 | Float32 | Time::Span | Nil
+    @write_timeout : Int32 | Float32 | Time::Span | Nil
+    @read_timeout : Int32 | Float32 | Time::Span | Nil
     @http_client : HTTP::Client
     @http_request : HTTP::Request
     @headers : HTTP::Headers
@@ -116,6 +119,9 @@ module Crest
       @max_redirects = max_redirects
 
       @tls = options.fetch(:tls, nil).as(OpenSSL::SSL::Context::Client | Nil)
+      @connect_timeout = options.fetch(:connect_timeout, nil).as(Int32 | Float32 | Time::Span | Nil)
+      @write_timeout = options.fetch(:write_timeout, nil).as(Int32 | Float32 | Time::Span | Nil)
+      @read_timeout = options.fetch(:read_timeout, nil).as(Int32 | Float32 | Time::Span | Nil)
       @http_client = options.fetch(:http_client, new_http_client).as(HTTP::Client)
       @auth = options.fetch(:auth, "basic").as(String)
       @user = options.fetch(:user, nil).as(String | Nil)
@@ -222,7 +228,11 @@ module Crest
 
     private def new_http_client : HTTP::Client
       uri = URI.parse(@url)
-      HTTP::Client.new(uri, tls: @tls)
+      client = HTTP::Client.new(uri, tls: @tls)
+      client.connect_timeout = @connect_timeout.not_nil! if @connect_timeout
+      client.write_timeout = @write_timeout.not_nil! if @write_timeout
+      client.read_timeout = @read_timeout.not_nil! if @read_timeout
+      client
     end
 
     private def new_http_request(method, url, headers, body) : HTTP::Request
